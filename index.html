@@ -27,23 +27,44 @@
     </script>
     <script type="text/babel">
         const { useState, useEffect } = React;
+
         const VisiteurApp = () => {
             const [matches, setMatches] = useState([]);
             const [scorers, setScorers] = useState({});
             const [assists, setAssists] = useState({});
             const [loading, setLoading] = useState(true);
+            const [showAllScorers, setShowAllScorers] = useState(false);
+            const [showAllAssists, setShowAllAssists] = useState(false);
+            const [selectedHistoryMatch, setSelectedHistoryMatch] = useState(null);
+
+            const championshipDates = [
+                '2026-04-22', '2026-04-24', '2026-04-25', '2026-04-29',
+                '2026-05-01', '2026-05-02', '2026-05-06', '2026-05-08', '2026-05-09',
+                '2026-05-13', '2026-05-15', '2026-05-16', '2026-05-20', '2026-05-22',
+                '2026-05-23', '2026-05-27', '2026-05-29', '2026-05-30'
+            ];
 
             useEffect(() => {
-                const unsubMatches = db.collection('cloture').doc('matches').onSnapshot((doc) => { if (doc.exists) setMatches(doc.data().data || []); });
-                const unsubScorers = db.collection('cloture').doc('scorers').onSnapshot((doc) => { if (doc.exists) setScorers(doc.data().data || {}); });
-                const unsubAssists = db.collection('cloture').doc('assists').onSnapshot((doc) => { if (doc.exists) setAssists(doc.data().data || {}); });
+                const unsubMatches = db.collection('cloture').doc('matches').onSnapshot((doc) => {
+                    if (doc.exists) setMatches(doc.data().data || []);
+                });
+                const unsubScorers = db.collection('cloture').doc('scorers').onSnapshot((doc) => {
+                    if (doc.exists) setScorers(doc.data().data || {});
+                });
+                const unsubAssists = db.collection('cloture').doc('assists').onSnapshot((doc) => {
+                    if (doc.exists) setAssists(doc.data().data || {});
+                });
                 setLoading(false);
                 return () => { unsubMatches(); unsubScorers(); unsubAssists(); };
             }, []);
 
             const calculateTeamStats = () => {
-                const stats = { rouges: { points: 0, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, winStreak: 0, currentStreak: 0 }, bleus: { points: 0, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, winStreak: 0, currentStreak: 0 } };
+                const stats = {
+                    rouges: { points: 0, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, winStreak: 0, currentStreak: 0 },
+                    bleus: { points: 0, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, winStreak: 0, currentStreak: 0 }
+                };
                 let biggestWin = { team: '', score: '', diff: 0 };
+
                 matches.forEach((match) => {
                     if (match.scoreRouges !== null && match.scoreBleus !== null) {
                         stats.rouges.played++; stats.bleus.played++;
@@ -61,7 +82,8 @@
                             stats.bleus.winStreak = Math.max(stats.bleus.winStreak, stats.bleus.currentStreak);
                             if (diff > biggestWin.diff) biggestWin = { team: 'Bleus', score: `${match.scoreBleus}-${match.scoreRouges}`, diff };
                         } else {
-                            stats.rouges.points += 2; stats.bleus.points += 2; stats.rouges.draws++; stats.bleus.draws++;
+                            stats.rouges.points += 2; stats.bleus.points += 2;
+                            stats.rouges.draws++; stats.bleus.draws++;
                             stats.rouges.currentStreak = 0; stats.bleus.currentStreak = 0;
                         }
                     }
@@ -75,7 +97,8 @@
             const { stats, biggestWin } = calculateTeamStats();
             const topScorers = calculateTopScorers();
             const topAssists = calculateTopAssists();
-            const lastMatch = matches.filter(m => m.scoreRouges !== null).slice(-1)[0];
+            const playedMatches = matches.filter(m => m.scoreRouges !== null);
+            const lastMatch = playedMatches.slice(-1)[0];
             const nextMatch = matches.find(m => m.scoreRouges === null);
 
             if (loading) return <div className="flex items-center justify-center h-screen bg-blue-900 text-white text-xl">⚽ Chargement...</div>;
@@ -83,39 +106,53 @@
             return (
                 <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 p-2">
                     <div className="max-w-4xl mx-auto">
+
+                        {/* HEADER */}
                         <div className="bg-white rounded-lg shadow-xl p-3 mb-2">
                             <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 bg-red-600 rounded-full"></div>
                                 <div className="w-7 h-7 bg-blue-600 rounded-full"></div>
-                                <div><h1 className="text-lg font-bold">🏆 Championnat de Clôture</h1><p className="text-xs text-gray-600">Rouges vs Bleus</p></div>
+                                <div>
+                                    <h1 className="text-lg font-bold">🏆 Championnat de Clôture</h1>
+                                    <p className="text-xs text-gray-600">Rouges vs Bleus • 18 journées</p>
+                                </div>
                             </div>
                         </div>
 
+                        {/* DERNIER ET PROCHAIN MATCH */}
                         <div className="grid gap-2 mb-2">
                             {lastMatch && (
-                                <div className="bg-white rounded-lg shadow-lg p-2">
+                                <div className="bg-white rounded-lg shadow-lg p-3">
                                     <h2 className="text-sm font-bold mb-1">📅 Dernier Match - J{lastMatch.journee}</h2>
-                                    <p className="text-xs text-gray-600 mb-1 text-center">{new Date(lastMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                                    <div className="flex justify-around items-center">
-                                        <div className="text-center">
-                                            <div className="text-2xl font-bold text-red-600">{lastMatch.scoreRouges}</div>
-                                            <div className="text-xs mt-1">ROUGES</div>
+                                    <p className="text-xs text-gray-600 mb-2 text-center">
+                                        {new Date(lastMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    </p>
+                                    <div className="flex justify-around items-start">
+                                        <div className="text-center flex-1">
+                                            <div className="text-3xl font-bold text-red-600">{lastMatch.scoreRouges}</div>
+                                            <div className="text-xs mt-1 font-semibold">ROUGES</div>
                                             {lastMatch.goalsRouges && lastMatch.goalsRouges.length > 0 && (
-                                                <div className="mt-1 bg-red-50 p-1 rounded text-xs">
+                                                <div className="mt-2 bg-red-50 p-1 rounded text-xs text-left">
                                                     {lastMatch.goalsRouges.map((goal, i) => (
-                                                        <div key={i}>⚽{goal.scorer}{goal.assist !== 'Aucune' && ` (🎯${goal.assist})`}</div>
+                                                        <div key={i} className="mb-1">
+                                                            <span>⚽ <strong>{goal.scorer}</strong></span>
+                                                            {goal.assist !== 'Aucune' && <span className="text-gray-500"> 🎯{goal.assist}</span>}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="text-xl text-gray-400">-</div>
-                                        <div className="text-center">
-                                            <div className="text-2xl font-bold text-blue-600">{lastMatch.scoreBleus}</div>
-                                            <div className="text-xs mt-1">BLEUS</div>
+                                        <div className="text-xl text-gray-400 px-2 pt-2">-</div>
+                                        <div className="text-center flex-1">
+                                            <div className="text-3xl font-bold text-blue-600">{lastMatch.scoreBleus}</div>
+                                            <div className="text-xs mt-1 font-semibold">BLEUS</div>
                                             {lastMatch.goalsBleus && lastMatch.goalsBleus.length > 0 && (
-                                                <div className="mt-1 bg-blue-50 p-1 rounded text-xs">
+                                                <div className="mt-2 bg-blue-50 p-1 rounded text-xs text-left">
                                                     {lastMatch.goalsBleus.map((goal, i) => (
-                                                        <div key={i}>⚽{goal.scorer}{goal.assist !== 'Aucune' && ` (🎯${goal.assist})`}</div>
+                                                        <div key={i} className="mb-1">
+                                                            <span>⚽ <strong>{goal.scorer}</strong></span>
+                                                            {goal.assist !== 'Aucune' && <span className="text-gray-500"> 🎯{goal.assist}</span>}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
@@ -123,10 +160,13 @@
                                     </div>
                                 </div>
                             )}
+
                             {nextMatch && (
                                 <div className="bg-white rounded-lg shadow-lg p-2">
                                     <h2 className="text-sm font-bold mb-1">📅 Prochain Match - J{nextMatch.journee}</h2>
-                                    <p className="text-sm font-bold text-center mb-1">{new Date(nextMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                                    <p className="text-sm font-bold text-center mb-2">
+                                        {new Date(nextMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    </p>
                                     <div className="flex justify-center items-center gap-4">
                                         <div className="text-center"><div className="w-10 h-10 bg-red-600 rounded-full mx-auto"></div><div className="text-xs mt-1 font-semibold">ROUGES</div></div>
                                         <div className="text-xl font-bold text-gray-400">VS</div>
@@ -136,16 +176,34 @@
                             )}
                         </div>
 
+                        {/* CLASSEMENT */}
                         <div className="bg-white rounded-lg shadow-lg p-2 mb-2">
                             <h2 className="text-base font-bold mb-1">🏆 Classement</h2>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-xs">
-                                    <thead><tr className="border-b"><th className="text-left p-1">Équipe</th><th className="text-center p-1">J</th><th className="text-center p-1">V</th><th className="text-center p-1">N</th><th className="text-center p-1">D</th><th className="text-center p-1">BP</th><th className="text-center p-1">BC</th><th className="text-center p-1">Diff</th><th className="text-center p-1 font-bold">Pts</th></tr></thead>
+                                    <thead>
+                                        <tr className="border-b">
+                                            <th className="text-left p-1">Équipe</th>
+                                            <th className="text-center p-1">J</th><th className="text-center p-1">V</th>
+                                            <th className="text-center p-1">N</th><th className="text-center p-1">D</th>
+                                            <th className="text-center p-1">BP</th><th className="text-center p-1">BC</th>
+                                            <th className="text-center p-1">Diff</th><th className="text-center p-1 font-bold">Pts</th>
+                                        </tr>
+                                    </thead>
                                     <tbody>
-                                        {[{name:'Rouges',color:'text-red-600',...stats.rouges},{name:'Bleus',color:'text-blue-600',...stats.bleus}].sort((a,b)=>b.points-a.points||(b.goalsFor-b.goalsAgainst)-(a.goalsFor-a.goalsAgainst)).map((team,idx)=>(
+                                        {[{name:'Rouges',color:'text-red-600',...stats.rouges},{name:'Bleus',color:'text-blue-600',...stats.bleus}]
+                                            .sort((a,b)=>b.points-a.points||(b.goalsFor-b.goalsAgainst)-(a.goalsFor-a.goalsAgainst))
+                                            .map((team,idx)=>(
                                             <tr key={team.name} className={`border-b ${idx===0?'bg-yellow-50':''}`}>
                                                 <td className={`p-1 font-bold ${team.color}`}>{idx===0&&'👑 '}{team.name}</td>
-                                                <td className="text-center p-1">{team.played}</td><td className="text-center p-1">{team.wins}</td><td className="text-center p-1">{team.draws}</td><td className="text-center p-1">{team.losses}</td><td className="text-center p-1">{team.goalsFor}</td><td className="text-center p-1">{team.goalsAgainst}</td><td className="text-center p-1">{team.goalsFor-team.goalsAgainst}</td><td className="text-center p-1 font-bold">{team.points}</td>
+                                                <td className="text-center p-1">{team.played}</td>
+                                                <td className="text-center p-1">{team.wins}</td>
+                                                <td className="text-center p-1">{team.draws}</td>
+                                                <td className="text-center p-1">{team.losses}</td>
+                                                <td className="text-center p-1">{team.goalsFor}</td>
+                                                <td className="text-center p-1">{team.goalsAgainst}</td>
+                                                <td className="text-center p-1">{team.goalsFor-team.goalsAgainst}</td>
+                                                <td className="text-center p-1 font-bold">{team.points}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -153,31 +211,72 @@
                             </div>
                         </div>
 
+                        {/* STATS RAPIDES */}
                         <div className="grid grid-cols-3 gap-1 mb-2">
-                            <div className="bg-white rounded-lg shadow p-2"><h3 className="font-bold text-xs mb-1">📈 Série</h3><p className="text-xs text-red-600">R:{stats.rouges.winStreak}V</p><p className="text-xs text-blue-600">B:{stats.bleus.winStreak}V</p></div>
-                            <div className="bg-white rounded-lg shadow p-2"><h3 className="font-bold text-xs mb-1">🎯 Large</h3>{biggestWin.team?<p className={`text-xs ${biggestWin.team==='Rouges'?'text-red-600':'text-blue-600'}`}>{biggestWin.team}:{biggestWin.score}</p>:<p className="text-xs text-gray-500">-</p>}</div>
-                            <div className="bg-white rounded-lg shadow p-2"><h3 className="font-bold text-xs mb-1">👥 Top</h3>{topScorers[0]?<p className="text-xs text-purple-600 font-semibold">{topScorers[0].name}({topScorers[0].goals})</p>:<p className="text-xs text-gray-500">-</p>}</div>
+                            <div className="bg-white rounded-lg shadow p-2">
+                                <h3 className="font-bold text-xs mb-1">📈 Série</h3>
+                                <p className="text-xs text-red-600">R:{stats.rouges.winStreak}V</p>
+                                <p className="text-xs text-blue-600">B:{stats.bleus.winStreak}V</p>
+                            </div>
+                            <div className="bg-white rounded-lg shadow p-2">
+                                <h3 className="font-bold text-xs mb-1">🎯 Large</h3>
+                                {biggestWin.team ? <p className={`text-xs ${biggestWin.team==='Rouges'?'text-red-600':'text-blue-600'}`}>{biggestWin.team}:{biggestWin.score}</p> : <p className="text-xs text-gray-500">-</p>}
+                            </div>
+                            <div className="bg-white rounded-lg shadow p-2">
+                                <h3 className="font-bold text-xs mb-1">👥 Top</h3>
+                                {topScorers[0] ? <p className="text-xs text-purple-600 font-semibold">{topScorers[0].name}({topScorers[0].goals})</p> : <p className="text-xs text-gray-500">-</p>}
+                            </div>
                         </div>
 
+                        {/* CLASSEMENT BUTEURS */}
                         <div className="bg-white rounded-lg shadow-lg p-2 mb-2">
                             <h2 className="text-base font-bold mb-1">⚽ Classement des Buteurs</h2>
-                            {topScorers.length>0?<div className="grid grid-cols-2 gap-1">{topScorers.slice(0,10).map((scorer,idx)=><div key={scorer.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs"><div className="font-bold text-gray-400 w-4">{idx+1}</div><div className="flex-1 font-semibold">{scorer.name}</div><div className="text-base font-bold text-green-600">{scorer.goals}</div></div>)}</div>:<p className="text-xs text-center py-2">Aucun buteur</p>}
+                            {topScorers.length > 0 ? (
+                                <>
+                                    <div className="grid grid-cols-2 gap-1 mb-2">
+                                        {topScorers.slice(0, 10).map((scorer, idx) => (
+                                            <div key={scorer.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs">
+                                                <div className="font-bold text-gray-400 w-4">{idx + 1}</div>
+                                                <div className="flex-1 font-semibold">{scorer.name}</div>
+                                                <div className="text-base font-bold text-green-600">{scorer.goals}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {topScorers.length > 10 && (
+                                        <div>
+                                            <button
+                                                onClick={() => setShowAllScorers(!showAllScorers)}
+                                                className="w-full bg-gray-100 text-gray-700 py-1 rounded text-xs font-semibold"
+                                            >
+                                                {showAllScorers ? '🔼 Masquer' : `🔽 Voir tous les buteurs (${topScorers.length})`}
+                                            </button>
+                                            {showAllScorers && (
+                                                <div className="mt-2 grid grid-cols-2 gap-1">
+                                                    {topScorers.slice(10).map((scorer, idx) => (
+                                                        <div key={scorer.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs">
+                                                            <div className="font-bold text-gray-400 w-4">{idx + 11}</div>
+                                                            <div className="flex-1 font-semibold">{scorer.name}</div>
+                                                            <div className="text-base font-bold text-green-600">{scorer.goals}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            ) : <p className="text-xs text-center py-2">Aucun buteur</p>}
                         </div>
 
+                        {/* CLASSEMENT PASSEURS */}
                         <div className="bg-white rounded-lg shadow-lg p-2 mb-2">
                             <h2 className="text-base font-bold mb-1">🎯 Classement des Passeurs</h2>
-                            {topAssists.length>0?<div className="grid grid-cols-2 gap-1">{topAssists.slice(0,10).map((assist,idx)=><div key={assist.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs"><div className="font-bold text-gray-400 w-4">{idx+1}</div><div className="flex-1 font-semibold">{assist.name}</div><div className="text-base font-bold text-blue-600">{assist.assists}</div></div>)}</div>:<p className="text-xs text-center py-2">Aucun passeur</p>}
-                        </div>
-
-                        <div className="bg-white rounded-lg shadow-lg p-2">
-                            <h2 className="text-base font-bold mb-1">Historique</h2>
-                            {matches.filter(m=>m.scoreRouges!==null).length>0?<div className="space-y-1">{matches.filter(m=>m.scoreRouges!==null).reverse().map(match=><div key={match.journee} className="border-l-2 border-blue-600 pl-2 py-1"><div className="flex justify-between text-xs mb-1"><span className="font-bold">J{match.journee}</span><span className="text-gray-600">{new Date(match.date+'T12:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}</span></div><div className="flex justify-around"><span className="text-red-600 font-bold">{match.scoreRouges}</span><span className="text-gray-400">-</span><span className="text-blue-600 font-bold">{match.scoreBleus}</span></div></div>)}</div>:<p className="text-xs text-center py-2">Aucun match</p>}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-        ReactDOM.render(<VisiteurApp />, document.getElementById('root'));
-    </script>
-</body>
-</html>
+                            {topAssists.length > 0 ? (
+                                <>
+                                    <div className="grid grid-cols-2 gap-1 mb-2">
+                                        {topAssists.slice(0, 10).map((assist, idx) => (
+                                            <div key={assist.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs">
+                                                <div className="font-bold text-gray-400 w-4">{idx + 1}</div>
+                                                <div className="flex-1 font-semibold">{assist.name}</div>
+                                                <div className="text-base font-bold text-blue-600">{assist.assists}</div>
+                                            </div>
+                               
