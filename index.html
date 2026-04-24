@@ -4,279 +4,244 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>⚽ Championnat de Clôture</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #1e3a5f; min-height: 100vh; padding: 10px; }
+        .card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        h1 { font-size: 17px; font-weight: bold; }
+        h2 { font-size: 15px; font-weight: bold; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { padding: 6px 4px; border-bottom: 2px solid #e5e7eb; text-align: center; font-size: 11px; }
+        th:first-child { text-align: left; }
+        td { padding: 6px 4px; border-bottom: 1px solid #f3f4f6; text-align: center; }
+        td:first-child { text-align: left; font-weight: bold; }
+        .score-box { display: flex; justify-content: space-around; align-items: flex-start; padding: 8px 0; }
+        .team-score { text-align: center; flex: 1; }
+        .score-num { font-size: 32px; font-weight: bold; }
+        .team-name { font-size: 11px; font-weight: bold; margin-top: 4px; }
+        .goal-line { font-size: 11px; margin-top: 6px; padding: 4px; border-radius: 4px; }
+        .gr { background: #fef2f2; }
+        .gb { background: #eff6ff; }
+        .vs { font-size: 18px; color: #9ca3af; padding-top: 8px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .stat-box { background: white; border-radius: 8px; padding: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .stat-title { font-size: 10px; font-weight: bold; color: #6b7280; margin-bottom: 4px; }
+        .rank-item { display: flex; align-items: center; gap: 6px; padding: 6px; background: #f9fafb; border-radius: 6px; margin-bottom: 4px; font-size: 12px; }
+        .rank-num { font-weight: bold; color: #9ca3af; width: 20px; }
+        .rank-name { flex: 1; font-weight: bold; }
+        .show-more { width: 100%; padding: 8px; background: #f3f4f6; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; margin-top: 6px; }
+        .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 7px; border-left: 3px solid #2563eb; margin-bottom: 5px; font-size: 12px; }
+        .badge-r { background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; }
+        .badge-b { background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; }
+        .badge-n { background: #f3f4f6; color: #374151; padding: 2px 6px; border-radius: 8px; font-size: 10px; font-weight: bold; }
+        .detail-box { background: #f0f9ff; border: 2px solid #7dd3fc; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+        select { width: 100%; padding: 8px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 13px; margin-bottom: 8px; background: white; }
+        .loading { text-align: center; padding: 30px; color: white; font-size: 16px; }
+        .refresh-btn { position: fixed; bottom: 20px; right: 20px; background: #2563eb; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyD26jNyvIzWYNwfS97N27iZES-AFWVtIGc",
-            authDomain: "championnat-football.firebaseapp.com",
-            projectId: "championnat-football",
-            storageBucket: "championnat-football.firebasestorage.app",
-            messagingSenderId: "271329092716",
-            appId: "1:271329092716:web:68e7ff9e0527f489c36449"
+<div style="max-width:600px; margin:0 auto;">
+    <div class="card">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:24px;height:24px;background:#dc2626;border-radius:50%;"></div>
+            <div style="width:24px;height:24px;background:#2563eb;border-radius:50%;"></div>
+            <div>
+                <h1>🏆 Championnat de Clôture</h1>
+                <p style="font-size:11px;color:#6b7280;" id="lastUpdate">Chargement...</p>
+            </div>
+        </div>
+    </div>
+    <div id="mainContent"><p class="loading">⚽ Chargement des données...</p></div>
+</div>
+<button class="refresh-btn" onclick="loadData()" title="Actualiser">🔄</button>
+
+<script>
+    const API = 'https://script.google.com/macros/s/AKfycbx3I6qDagM_C8Z0uinCd3E9XNe2bUPOKZmfhHk4Egfij6KzYzl_1MfRS6U2TfqL1sTNKA/exec';
+    let data = { matches: [], players: [], scorers: {}, assists: {} };
+    let showAllScorers = false, showAllAssists = false;
+
+    async function loadData() {
+        try {
+            document.getElementById('lastUpdate').textContent = '🔄 Actualisation...';
+            const res = await fetch(API + '?t=' + Date.now());
+            if (!res.ok) throw new Error();
+            data = await res.json();
+            if (!data.matches) data = { matches: [], players: [], scorers: {}, assists: {} };
+            const now = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('lastUpdate').textContent = '✅ Mis à jour à ' + now;
+            render();
+        } catch(e) {
+            document.getElementById('lastUpdate').textContent = '❌ Erreur de connexion';
+            document.getElementById('mainContent').innerHTML = '<p class="loading" style="color:#fca5a5;">❌ Impossible de charger les données.<br>Vérifiez votre connexion.</p>';
+        }
+    }
+
+    function calcStats() {
+        const s = {
+            rouges: { pts:0, j:0, v:0, n:0, d:0, bp:0, bc:0, streak:0, cur:0 },
+            bleus:  { pts:0, j:0, v:0, n:0, d:0, bp:0, bc:0, streak:0, cur:0 }
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-    </script>
-    <script type="text/babel">
-        const { useState, useEffect } = React;
+        let bigWin = { team:'', score:'', diff:0 };
+        data.matches.forEach(m => {
+            if (m.scoreRouges === null) return;
+            s.rouges.j++; s.bleus.j++;
+            s.rouges.bp += m.scoreRouges; s.rouges.bc += m.scoreBleus;
+            s.bleus.bp += m.scoreBleus; s.bleus.bc += m.scoreRouges;
+            const diff = Math.abs(m.scoreRouges - m.scoreBleus);
+            if (m.scoreRouges > m.scoreBleus) {
+                s.rouges.pts+=4; s.rouges.v++; s.bleus.pts+=1; s.bleus.d++;
+                s.rouges.cur++; s.bleus.cur=0;
+                s.rouges.streak = Math.max(s.rouges.streak, s.rouges.cur);
+                if (diff > bigWin.diff) bigWin = { team:'Rouges', score:`${m.scoreRouges}-${m.scoreBleus}`, diff };
+            } else if (m.scoreBleus > m.scoreRouges) {
+                s.bleus.pts+=4; s.bleus.v++; s.rouges.pts+=1; s.rouges.d++;
+                s.bleus.cur++; s.rouges.cur=0;
+                s.bleus.streak = Math.max(s.bleus.streak, s.bleus.cur);
+                if (diff > bigWin.diff) bigWin = { team:'Bleus', score:`${m.scoreBleus}-${m.scoreRouges}`, diff };
+            } else {
+                s.rouges.pts+=2; s.bleus.pts+=2; s.rouges.n++; s.bleus.n++;
+                s.rouges.cur=0; s.bleus.cur=0;
+            }
+        });
+        return { s, bigWin };
+    }
 
-        const VisiteurApp = () => {
-            const [matches, setMatches] = useState([]);
-            const [scorers, setScorers] = useState({});
-            const [assists, setAssists] = useState({});
-            const [loading, setLoading] = useState(true);
-            const [showAllScorers, setShowAllScorers] = useState(false);
-            const [showAllAssists, setShowAllAssists] = useState(false);
-            const [selectedHistoryMatch, setSelectedHistoryMatch] = useState(null);
+    function fmtDate(d, long=false) {
+        return new Date(d+'T12:00:00').toLocaleDateString('fr-FR', long
+            ? { weekday:'long', day:'numeric', month:'long' }
+            : { day:'numeric', month:'short' });
+    }
 
-            const championshipDates = [
-                '2026-04-22', '2026-04-24', '2026-04-25', '2026-04-29',
-                '2026-05-01', '2026-05-02', '2026-05-06', '2026-05-08', '2026-05-09',
-                '2026-05-13', '2026-05-15', '2026-05-16', '2026-05-20', '2026-05-22',
-                '2026-05-23', '2026-05-27', '2026-05-29', '2026-05-30'
-            ];
+    function topList(obj) {
+        return Object.entries(obj).map(([name,val])=>({name,val})).sort((a,b)=>b.val-a.val);
+    }
 
-            useEffect(() => {
-                const unsubMatches = db.collection('cloture').doc('matches').onSnapshot((doc) => {
-                    if (doc.exists) setMatches(doc.data().data || []);
-                });
-                const unsubScorers = db.collection('cloture').doc('scorers').onSnapshot((doc) => {
-                    if (doc.exists) setScorers(doc.data().data || {});
-                });
-                const unsubAssists = db.collection('cloture').doc('assists').onSnapshot((doc) => {
-                    if (doc.exists) setAssists(doc.data().data || {});
-                });
-                setLoading(false);
-                return () => { unsubMatches(); unsubScorers(); unsubAssists(); };
-            }, []);
+    function render() {
+        const { s, bigWin } = calcStats();
+        const scorersList = topList(data.scorers);
+        const assistsList = topList(data.assists);
+        const played = data.matches.filter(m => m.scoreRouges !== null);
+        const last = played.slice(-1)[0];
+        const next = data.matches.find(m => m.scoreRouges === null);
+        const teams = [
+            { name:'Rouges', col:'#dc2626', ...s.rouges },
+            { name:'Bleus',  col:'#2563eb', ...s.bleus }
+        ].sort((a,b) => b.pts-a.pts || (b.bp-b.bc)-(a.bp-a.bc));
 
-            const calculateTeamStats = () => {
-                const stats = {
-                    rouges: { points: 0, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, winStreak: 0, currentStreak: 0 },
-                    bleus: { points: 0, played: 0, wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, winStreak: 0, currentStreak: 0 }
-                };
-                let biggestWin = { team: '', score: '', diff: 0 };
+        let html = '';
 
-                matches.forEach((match) => {
-                    if (match.scoreRouges !== null && match.scoreBleus !== null) {
-                        stats.rouges.played++; stats.bleus.played++;
-                        stats.rouges.goalsFor += match.scoreRouges; stats.rouges.goalsAgainst += match.scoreBleus;
-                        stats.bleus.goalsFor += match.scoreBleus; stats.bleus.goalsAgainst += match.scoreRouges;
-                        const diff = Math.abs(match.scoreRouges - match.scoreBleus);
-                        if (match.scoreRouges > match.scoreBleus) {
-                            stats.rouges.points += 4; stats.rouges.wins++; stats.bleus.points += 1; stats.bleus.losses++;
-                            stats.rouges.currentStreak++; stats.bleus.currentStreak = 0;
-                            stats.rouges.winStreak = Math.max(stats.rouges.winStreak, stats.rouges.currentStreak);
-                            if (diff > biggestWin.diff) biggestWin = { team: 'Rouges', score: `${match.scoreRouges}-${match.scoreBleus}`, diff };
-                        } else if (match.scoreBleus > match.scoreRouges) {
-                            stats.bleus.points += 4; stats.bleus.wins++; stats.rouges.points += 1; stats.rouges.losses++;
-                            stats.bleus.currentStreak++; stats.rouges.currentStreak = 0;
-                            stats.bleus.winStreak = Math.max(stats.bleus.winStreak, stats.bleus.currentStreak);
-                            if (diff > biggestWin.diff) biggestWin = { team: 'Bleus', score: `${match.scoreBleus}-${match.scoreRouges}`, diff };
-                        } else {
-                            stats.rouges.points += 2; stats.bleus.points += 2;
-                            stats.rouges.draws++; stats.bleus.draws++;
-                            stats.rouges.currentStreak = 0; stats.bleus.currentStreak = 0;
-                        }
-                    }
-                });
-                return { stats, biggestWin };
-            };
+        if (last) {
+            html += `<div class="card">
+                <h2>📅 Dernier Match - J${last.journee}</h2>
+                <p style="text-align:center;font-size:12px;color:#6b7280;margin-bottom:8px;">${fmtDate(last.date,true)}</p>
+                <div class="score-box">
+                    <div class="team-score">
+                        <div class="score-num" style="color:#dc2626;">${last.scoreRouges}</div>
+                        <div class="team-name">ROUGES</div>
+                        ${last.goalsRouges&&last.goalsRouges.length>0?`<div class="goal-line gr">${last.goalsRouges.map(g=>`⚽${g.scorer}${g.assist!=='Aucune'?` <span style="color:#6b7280">(🎯${g.assist})</span>`:''}`).join('<br>')}</div>`:''}
+                    </div>
+                    <div class="vs">-</div>
+                    <div class="team-score">
+                        <div class="score-num" style="color:#2563eb;">${last.scoreBleus}</div>
+                        <div class="team-name">BLEUS</div>
+                        ${last.goalsBleus&&last.goalsBleus.length>0?`<div class="goal-line gb">${last.goalsBleus.map(g=>`⚽${g.scorer}${g.assist!=='Aucune'?` <span style="color:#6b7280">(🎯${g.assist})</span>`:''}`).join('<br>')}</div>`:''}
+                    </div>
+                </div>
+            </div>`;
+        }
 
-            const calculateTopScorers = () => Object.entries(scorers).map(([name, goals]) => ({ name, goals })).sort((a, b) => b.goals - a.goals);
-            const calculateTopAssists = () => Object.entries(assists).map(([name, assists]) => ({ name, assists })).sort((a, b) => b.assists - a.assists);
+        if (next) {
+            html += `<div class="card">
+                <h2>📅 Prochain Match - J${next.journee}</h2>
+                <p style="text-align:center;font-weight:bold;font-size:14px;margin:8px 0;">${fmtDate(next.date,true)}</p>
+                <div class="score-box">
+                    <div class="team-score"><div style="width:40px;height:40px;background:#dc2626;border-radius:50%;margin:0 auto;"></div><div class="team-name">ROUGES</div></div>
+                    <div class="vs">VS</div>
+                    <div class="team-score"><div style="width:40px;height:40px;background:#2563eb;border-radius:50%;margin:0 auto;"></div><div class="team-name">BLEUS</div></div>
+                </div>
+            </div>`;
+        }
 
-            const { stats, biggestWin } = calculateTeamStats();
-            const topScorers = calculateTopScorers();
-            const topAssists = calculateTopAssists();
-            const playedMatches = matches.filter(m => m.scoreRouges !== null);
-            const lastMatch = playedMatches.slice(-1)[0];
-            const nextMatch = matches.find(m => m.scoreRouges === null);
+        html += `<div class="card">
+            <h2>🏆 Classement</h2>
+            <table><thead><tr><th>Équipe</th><th>J</th><th>V</th><th>N</th><th>D</th><th>BP</th><th>BC</th><th>Diff</th><th>Pts</th></tr></thead><tbody>
+            ${teams.map((t,i)=>`<tr style="${i===0?'background:#fefce8;':''}">
+                <td style="color:${t.col};">${i===0?'👑 ':''}${t.name}</td>
+                <td>${t.j}</td><td>${t.v}</td><td>${t.n}</td><td>${t.d}</td>
+                <td>${t.bp}</td><td>${t.bc}</td><td>${t.bp-t.bc}</td><td><strong>${t.pts}</strong></td>
+            </tr>`).join('')}
+            </tbody></table>
+        </div>`;
 
-            if (loading) return <div className="flex items-center justify-center h-screen bg-blue-900 text-white text-xl">⚽ Chargement...</div>;
+        html += `<div class="stat-grid">
+            <div class="stat-box"><div class="stat-title">📈 Série</div><div style="color:#dc2626;font-weight:bold;font-size:12px;">R:${s.rouges.streak}V</div><div style="color:#2563eb;font-weight:bold;font-size:12px;">B:${s.bleus.streak}V</div></div>
+            <div class="stat-box"><div class="stat-title">🎯 + Large</div><div style="font-weight:bold;font-size:11px;color:${bigWin.team==='Rouges'?'#dc2626':'#2563eb'}">${bigWin.team?`${bigWin.team}:${bigWin.score}`:'-'}</div></div>
+            <div class="stat-box"><div class="stat-title">👥 Top</div><div style="color:#7c3aed;font-weight:bold;font-size:11px;">${scorersList[0]?`${scorersList[0].name}(${scorersList[0].val})`:'-'}</div></div>
+        </div>`;
 
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-blue-900 p-2">
-                    <div className="max-w-4xl mx-auto">
+        html += `<div class="card">
+            <h2>⚽ Classement des Buteurs</h2>
+            ${scorersList.length===0?'<p style="color:#9ca3af;text-align:center;font-size:12px;">Aucun buteur</p>':
+            scorersList.slice(0,10).map((s,i)=>`<div class="rank-item"><div class="rank-num">${i+1}</div><div class="rank-name">${s.name}</div><div style="font-weight:bold;font-size:16px;color:#16a34a;">${s.val}</div></div>`).join('')+
+            (scorersList.length>10?`<button class="show-more" onclick="toggleScorers()">${showAllScorers?'🔼 Masquer':`🔽 Voir tous (${scorersList.length})`}</button>${showAllScorers?scorersList.slice(10).map((s,i)=>`<div class="rank-item"><div class="rank-num">${i+11}</div><div class="rank-name">${s.name}</div><div style="font-weight:bold;font-size:16px;color:#16a34a;">${s.val}</div></div>`).join(''):''}`:'')}
+        </div>`;
 
-                        {/* HEADER */}
-                        <div className="bg-white rounded-lg shadow-xl p-3 mb-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-red-600 rounded-full"></div>
-                                <div className="w-7 h-7 bg-blue-600 rounded-full"></div>
-                                <div>
-                                    <h1 className="text-lg font-bold">🏆 Championnat de Clôture</h1>
-                                    <p className="text-xs text-gray-600">Rouges vs Bleus • 18 journées</p>
-                                </div>
-                            </div>
-                        </div>
+        html += `<div class="card">
+            <h2>🎯 Classement des Passeurs</h2>
+            ${assistsList.length===0?'<p style="color:#9ca3af;text-align:center;font-size:12px;">Aucun passeur</p>':
+            assistsList.slice(0,10).map((a,i)=>`<div class="rank-item"><div class="rank-num">${i+1}</div><div class="rank-name">${a.name}</div><div style="font-weight:bold;font-size:16px;color:#2563eb;">${a.val}</div></div>`).join('')+
+            (assistsList.length>10?`<button class="show-more" onclick="toggleAssists()">${showAllAssists?'🔼 Masquer':`🔽 Voir tous (${assistsList.length})`}</button>${showAllAssists?assistsList.slice(10).map((a,i)=>`<div class="rank-item"><div class="rank-num">${i+11}</div><div class="rank-name">${a.name}</div><div style="font-weight:bold;font-size:16px;color:#2563eb;">${a.val}</div></div>`).join(''):''}`:'')}
+        </div>`;
 
-                        {/* DERNIER ET PROCHAIN MATCH */}
-                        <div className="grid gap-2 mb-2">
-                            {lastMatch && (
-                                <div className="bg-white rounded-lg shadow-lg p-3">
-                                    <h2 className="text-sm font-bold mb-1">📅 Dernier Match - J{lastMatch.journee}</h2>
-                                    <p className="text-xs text-gray-600 mb-2 text-center">
-                                        {new Date(lastMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                    </p>
-                                    <div className="flex justify-around items-start">
-                                        <div className="text-center flex-1">
-                                            <div className="text-3xl font-bold text-red-600">{lastMatch.scoreRouges}</div>
-                                            <div className="text-xs mt-1 font-semibold">ROUGES</div>
-                                            {lastMatch.goalsRouges && lastMatch.goalsRouges.length > 0 && (
-                                                <div className="mt-2 bg-red-50 p-1 rounded text-xs text-left">
-                                                    {lastMatch.goalsRouges.map((goal, i) => (
-                                                        <div key={i} className="mb-1">
-                                                            <span>⚽ <strong>{goal.scorer}</strong></span>
-                                                            {goal.assist !== 'Aucune' && <span className="text-gray-500"> 🎯{goal.assist}</span>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="text-xl text-gray-400 px-2 pt-2">-</div>
-                                        <div className="text-center flex-1">
-                                            <div className="text-3xl font-bold text-blue-600">{lastMatch.scoreBleus}</div>
-                                            <div className="text-xs mt-1 font-semibold">BLEUS</div>
-                                            {lastMatch.goalsBleus && lastMatch.goalsBleus.length > 0 && (
-                                                <div className="mt-2 bg-blue-50 p-1 rounded text-xs text-left">
-                                                    {lastMatch.goalsBleus.map((goal, i) => (
-                                                        <div key={i} className="mb-1">
-                                                            <span>⚽ <strong>{goal.scorer}</strong></span>
-                                                            {goal.assist !== 'Aucune' && <span className="text-gray-500"> 🎯{goal.assist}</span>}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+        html += `<div class="card">
+            <h2>📋 Historique</h2>
+            ${played.length===0?'<p style="color:#9ca3af;text-align:center;font-size:12px;">Aucun match joué</p>':`
+            <select onchange="showDetail(this.value)">
+                <option value="">-- Détail d'un match --</option>
+                ${played.slice().reverse().map(m=>`<option value="${m.journee}">J${m.journee} • ${fmtDate(m.date,true)} (${m.scoreRouges}-${m.scoreBleus})</option>`).join('')}
+            </select>
+            <div id="matchDetail"></div>
+            ${played.slice().reverse().map(m=>{
+                const res = m.scoreRouges>m.scoreBleus?'<span class="badge-r">R</span>':m.scoreBleus>m.scoreRouges?'<span class="badge-b">B</span>':'<span class="badge-n">N</span>';
+                return `<div class="hist-item"><div><strong>J${m.journee}</strong> <span style="color:#6b7280;">${fmtDate(m.date)}</span></div><div style="display:flex;align-items:center;gap:6px;"><span style="color:#dc2626;font-weight:bold;">${m.scoreRouges}</span><span style="color:#9ca3af;">-</span><span style="color:#2563eb;font-weight:bold;">${m.scoreBleus}</span>${res}</div></div>`;
+            }).join('')}`}
+        </div>`;
 
-                            {nextMatch && (
-                                <div className="bg-white rounded-lg shadow-lg p-2">
-                                    <h2 className="text-sm font-bold mb-1">📅 Prochain Match - J{nextMatch.journee}</h2>
-                                    <p className="text-sm font-bold text-center mb-2">
-                                        {new Date(nextMatch.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                    </p>
-                                    <div className="flex justify-center items-center gap-4">
-                                        <div className="text-center"><div className="w-10 h-10 bg-red-600 rounded-full mx-auto"></div><div className="text-xs mt-1 font-semibold">ROUGES</div></div>
-                                        <div className="text-xl font-bold text-gray-400">VS</div>
-                                        <div className="text-center"><div className="w-10 h-10 bg-blue-600 rounded-full mx-auto"></div><div className="text-xs mt-1 font-semibold">BLEUS</div></div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+        document.getElementById('mainContent').innerHTML = html;
+    }
 
-                        {/* CLASSEMENT */}
-                        <div className="bg-white rounded-lg shadow-lg p-2 mb-2">
-                            <h2 className="text-base font-bold mb-1">🏆 Classement</h2>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-xs">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="text-left p-1">Équipe</th>
-                                            <th className="text-center p-1">J</th><th className="text-center p-1">V</th>
-                                            <th className="text-center p-1">N</th><th className="text-center p-1">D</th>
-                                            <th className="text-center p-1">BP</th><th className="text-center p-1">BC</th>
-                                            <th className="text-center p-1">Diff</th><th className="text-center p-1 font-bold">Pts</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {[{name:'Rouges',color:'text-red-600',...stats.rouges},{name:'Bleus',color:'text-blue-600',...stats.bleus}]
-                                            .sort((a,b)=>b.points-a.points||(b.goalsFor-b.goalsAgainst)-(a.goalsFor-a.goalsAgainst))
-                                            .map((team,idx)=>(
-                                            <tr key={team.name} className={`border-b ${idx===0?'bg-yellow-50':''}`}>
-                                                <td className={`p-1 font-bold ${team.color}`}>{idx===0&&'👑 '}{team.name}</td>
-                                                <td className="text-center p-1">{team.played}</td>
-                                                <td className="text-center p-1">{team.wins}</td>
-                                                <td className="text-center p-1">{team.draws}</td>
-                                                <td className="text-center p-1">{team.losses}</td>
-                                                <td className="text-center p-1">{team.goalsFor}</td>
-                                                <td className="text-center p-1">{team.goalsAgainst}</td>
-                                                <td className="text-center p-1">{team.goalsFor-team.goalsAgainst}</td>
-                                                <td className="text-center p-1 font-bold">{team.points}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+    function showDetail(val) {
+        const div = document.getElementById('matchDetail');
+        if (!val) { div.innerHTML=''; return; }
+        const m = data.matches.find(x => x.journee===parseInt(val));
+        if (!m) return;
+        div.innerHTML = `<div class="detail-box">
+            <p style="text-align:center;font-weight:bold;margin-bottom:8px;">J${m.journee} • ${fmtDate(m.date,true)}</p>
+            <div class="score-box">
+                <div class="team-score">
+                    <div class="score-num" style="color:#dc2626;">${m.scoreRouges}</div>
+                    <div class="team-name">ROUGES</div>
+                    ${m.goalsRouges&&m.goalsRouges.length>0?`<div class="goal-line gr">${m.goalsRouges.map(g=>`⚽ <strong>${g.scorer}</strong>${g.assist!=='Aucune'?`<br><span style="color:#6b7280;font-size:10px;">🎯 ${g.assist}</span>`:''}`).join('<br>')}</div>`:''}
+                </div>
+                <div class="vs">-</div>
+                <div class="team-score">
+                    <div class="score-num" style="color:#2563eb;">${m.scoreBleus}</div>
+                    <div class="team-name">BLEUS</div>
+                    ${m.goalsBleus&&m.goalsBleus.length>0?`<div class="goal-line gb">${m.goalsBleus.map(g=>`⚽ <strong>${g.scorer}</strong>${g.assist!=='Aucune'?`<br><span style="color:#6b7280;font-size:10px;">🎯 ${g.assist}</span>`:''}`).join('<br>')}</div>`:''}
+                </div>
+            </div>
+            <p style="text-align:center;font-weight:bold;margin-top:8px;">
+                ${m.scoreRouges>m.scoreBleus?'🏆 Victoire <span style="color:#dc2626;">ROUGES</span>':m.scoreBleus>m.scoreRouges?'🏆 Victoire <span style="color:#2563eb;">BLEUS</span>':'🤝 Match Nul'}
+            </p>
+        </div>`;
+    }
 
-                        {/* STATS RAPIDES */}
-                        <div className="grid grid-cols-3 gap-1 mb-2">
-                            <div className="bg-white rounded-lg shadow p-2">
-                                <h3 className="font-bold text-xs mb-1">📈 Série</h3>
-                                <p className="text-xs text-red-600">R:{stats.rouges.winStreak}V</p>
-                                <p className="text-xs text-blue-600">B:{stats.bleus.winStreak}V</p>
-                            </div>
-                            <div className="bg-white rounded-lg shadow p-2">
-                                <h3 className="font-bold text-xs mb-1">🎯 Large</h3>
-                                {biggestWin.team ? <p className={`text-xs ${biggestWin.team==='Rouges'?'text-red-600':'text-blue-600'}`}>{biggestWin.team}:{biggestWin.score}</p> : <p className="text-xs text-gray-500">-</p>}
-                            </div>
-                            <div className="bg-white rounded-lg shadow p-2">
-                                <h3 className="font-bold text-xs mb-1">👥 Top</h3>
-                                {topScorers[0] ? <p className="text-xs text-purple-600 font-semibold">{topScorers[0].name}({topScorers[0].goals})</p> : <p className="text-xs text-gray-500">-</p>}
-                            </div>
-                        </div>
+    function toggleScorers() { showAllScorers=!showAllScorers; render(); }
+    function toggleAssists() { showAllAssists=!showAllAssists; render(); }
 
-                        {/* CLASSEMENT BUTEURS */}
-                        <div className="bg-white rounded-lg shadow-lg p-2 mb-2">
-                            <h2 className="text-base font-bold mb-1">⚽ Classement des Buteurs</h2>
-                            {topScorers.length > 0 ? (
-                                <>
-                                    <div className="grid grid-cols-2 gap-1 mb-2">
-                                        {topScorers.slice(0, 10).map((scorer, idx) => (
-                                            <div key={scorer.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs">
-                                                <div className="font-bold text-gray-400 w-4">{idx + 1}</div>
-                                                <div className="flex-1 font-semibold">{scorer.name}</div>
-                                                <div className="text-base font-bold text-green-600">{scorer.goals}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {topScorers.length > 10 && (
-                                        <div>
-                                            <button
-                                                onClick={() => setShowAllScorers(!showAllScorers)}
-                                                className="w-full bg-gray-100 text-gray-700 py-1 rounded text-xs font-semibold"
-                                            >
-                                                {showAllScorers ? '🔼 Masquer' : `🔽 Voir tous les buteurs (${topScorers.length})`}
-                                            </button>
-                                            {showAllScorers && (
-                                                <div className="mt-2 grid grid-cols-2 gap-1">
-                                                    {topScorers.slice(10).map((scorer, idx) => (
-                                                        <div key={scorer.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs">
-                                                            <div className="font-bold text-gray-400 w-4">{idx + 11}</div>
-                                                            <div className="flex-1 font-semibold">{scorer.name}</div>
-                                                            <div className="text-base font-bold text-green-600">{scorer.goals}</div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
-                            ) : <p className="text-xs text-center py-2">Aucun buteur</p>}
-                        </div>
-
-                        {/* CLASSEMENT PASSEURS */}
-                        <div className="bg-white rounded-lg shadow-lg p-2 mb-2">
-                            <h2 className="text-base font-bold mb-1">🎯 Classement des Passeurs</h2>
-                            {topAssists.length > 0 ? (
-                                <>
-                                    <div className="grid grid-cols-2 gap-1 mb-2">
-                                        {topAssists.slice(0, 10).map((assist, idx) => (
-                                            <div key={assist.name} className="flex items-center gap-1 p-1 bg-gray-50 rounded text-xs">
-                                                <div className="font-bold text-gray-400 w-4">{idx + 1}</div>
-                                                <div className="flex-1 font-semibold">{assist.name}</div>
-                                                <div className="text-base font-bold text-blue-600">{assist.assists}</div>
-                                            </div>
-                               
+    loadData();
+    setInterval(loadData, 30000);
+</script>
+</body>
+</html>
